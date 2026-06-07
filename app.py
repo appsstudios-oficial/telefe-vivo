@@ -4,7 +4,6 @@ from flask import Flask, Response, request
 
 app = Flask(__name__)
 
-# URL de tu lista de junio cifrada
 URL_CIFRADA = b"aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL2FwcHNzdHVkaW9zLW9maWNpYWwvbGlzdGFzMjAyNi9yZWZzL2hlYWRzL21haW4vanVuaW8yMDI2Lm0zdQ=="
 CLAVE_ACCESO = "MiTele2026"
 
@@ -15,30 +14,18 @@ def obtener_lista():
     if clave_recibida != CLAVE_ACCESO:
         return "No encontrado", 404
 
-    # 2. Leer firma del dispositivo/app
+    # 2. Leer quién pide la lista
     user_agent = request.headers.get('User-Agent', '').lower()
     
-    # Lista ampliada de reproductores permitidos (Smart TV, Celular y VLC)
-    permitidos = [
-        'vlc', 'iptv', 'smarters', 'xciptv', 'ott', 'player', 
-        'smarttv', 'tivi', 'mxplayer', 'core', 'lavf', 'http-client'
-    ]
+    # Si entran desde un navegador web de PC puro, los bloqueamos de una
+    navegadores_web = ['chrome', 'edge', 'firefox', 'opera']
     
-    # Navegadores web comunes a bloquear
-    navegadores = ['chrome', 'safari', 'edge', 'opera', 'firefox']
-
-    # Si la app se identifica como uno de los reproductores permitidos, pasa directo
-    es_reproductor = any(rep in user_agent for rep in permitidos)
-    
-    # Si tiene pinta de navegador de PC/Celular y NO está en los permitidos, se bloquea
-    es_navegador_puro = any(nav in user_agent for nav in navegadores) and not es_reproductor
-
-    if es_navegador_puro:
-        # Engañamos al intruso con un error 404 falso
+    # Si es un navegador web puro y NO viene de una app de IPTV conocida, bloqueamos
+    if any(nav in user_agent for nav in navegadores_web) and not any(rep in user_agent for rep in ['vlc', 'smarters', 'iptv']):
         return "<h1>404 Not Found</h1>The server can not find the requested page.", 404
 
     try:
-        # Si pasó los filtros, el servidor Render procesa tu lista original
+        # Para cualquier otro caso (VLC PC, VLC Celu, Smart TV), entregamos la lista
         url_real = base64.b64decode(URL_CIFRADA).decode('utf-8')
         headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get(url_real, headers=headers)
