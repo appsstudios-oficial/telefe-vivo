@@ -4,8 +4,8 @@ from flask import Flask, Response, request
 
 app = Flask(__name__)
 
-# URL Clásica de tu GitHub convertida a Base64 (Limpia y sin bloqueos)
-URL_CIFRADA = b"aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL2FwcHNzdHVkaW9zLW9maWNpYWwvbGlzdGFzMjAyNi9tYWluL2p1bmlvMjAyNi5tM3U="
+# URL corregida sin la 'b' adelante para evitar el error de Render
+URL_CIFRADA = "aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL2FwcHNzdHVkaW9zLW9maWNpYWwvbGlzdGFzMjAyNi9tYWluL2p1bmlvMjAyNi5tM3U="
 CLAVE_ACCESO = "MiTele2026"
 
 @app.route('/lista.m3u')
@@ -24,8 +24,8 @@ def obtener_lista():
         return "<h1>404 Not Found</h1>The server can not find the requested page.", 404
 
     try:
-        # Desciframos la URL en formato clásico
-        url_real = base64.b64decode(URL_CIFRADA).decode('utf-8')
+        # Desciframos la URL
+        url_real = base64.b64decode(URL_CIFRADA.encode('utf-8')).decode('utf-8')
         headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get(url_real, headers=headers)
         
