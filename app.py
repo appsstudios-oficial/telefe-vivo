@@ -4,36 +4,41 @@ from flask import Flask, Response, request
 
 app = Flask(__name__)
 
-# URL de junio cifrada
+# URL de tu lista de junio cifrada
 URL_CIFRADA = b"aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL2FwcHNzdHVkaW9zLW9maWNpYWwvbGlzdGFzMjAyNi9yZWZzL2hlYWRzL21haW4vanVuaW8yMDI2Lm0zdQ=="
 CLAVE_ACCESO = "MiTele2026"
 
 @app.route('/lista.m3u')
 def obtener_lista():
-    # 1. Validar clave
+    # 1. Validar clave secreta
     clave_recibida = request.args.get('clave')
     if clave_recibida != CLAVE_ACCESO:
         return "No encontrado", 404
 
-    # 2. Validar quién espía (User-Agent)
+    # 2. Leer firma del dispositivo/app
     user_agent = request.headers.get('User-Agent', '').lower()
     
-    # Lista de palabras comunes en navegadores web
-    navegadores = ['mozilla', 'chrome', 'safari', 'edge', 'opera', 'android', 'iphone']
+    # Lista ampliada de reproductores permitidos (Smart TV, Celular y VLC)
+    permitidos = [
+        'vlc', 'iptv', 'smarters', 'xciptv', 'ott', 'player', 
+        'smarttv', 'tivi', 'mxplayer', 'core', 'lavf', 'http-client'
+    ]
     
-    # Excepciones: Permitir VLC o reproductores de TV aunque tengan la palabra Mozilla
-    permitidos = ['vlc', 'iptv', 'ott', 'smarters', 'player', 'smarttv', 'tivi']
+    # Navegadores web comunes a bloquear
+    navegadores = ['chrome', 'safari', 'edge', 'opera', 'firefox']
 
-    # Si parece un navegador y NO es un reproductor permitido, lo bloqueamos
-    es_navegador = any(nav in user_agent for nav in navegadores)
+    # Si la app se identifica como uno de los reproductores permitidos, pasa directo
     es_reproductor = any(rep in user_agent for rep in permitidos)
+    
+    # Si tiene pinta de navegador de PC/Celular y NO está en los permitidos, se bloquea
+    es_navegador_puro = any(nav in user_agent for nav in navegadores) and not es_reproductor
 
-    if es_navegador and not es_reproductor:
-        # Le mentimos al navegador diciendo que la página no existe
+    if es_navegador_puro:
+        # Engañamos al intruso con un error 404 falso
         return "<h1>404 Not Found</h1>The server can not find the requested page.", 404
 
     try:
-        # Si pasó los filtros (es VLC o la TV), le damos la lista original
+        # Si pasó los filtros, el servidor Render procesa tu lista original
         url_real = base64.b64decode(URL_CIFRADA).decode('utf-8')
         headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get(url_real, headers=headers)
